@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react"
-import {GetFlagCoordinates,GetDataFrom,formatUnixTimestamp} from "../commonFunctions.js";
+import {GetFlagCoordinates, GetDataFrom, formatUnixTimestamp} from "../commonFunctions";
 import {useGlobal} from "../GlobalContext";
 import {ChessGame, ChessPlayerProfile} from "../types";
 
@@ -60,6 +60,42 @@ function GetTimeClassIcon(timeClass: string): string {
 export default function MatchHistory() {
     const { global } = useGlobal();
     const [matchHistorySize, setMatchHistorySize] = useState(5);
+    const [gamesToRender, setGamesToRender] = useState<{game:ChessGame,player2Profile:ChessPlayerProfile|undefined}[]>([]);
+    const [visible, setVisible] = useState<boolean>(false);
+
+    useEffect(() => {
+        setVisible(false);
+        let cancelled = false;
+        async function GetGamesToRender() {
+
+            let nextGamesToRender = (await Promise.all(
+                global.foundGames.reverse().slice(0, matchHistorySize).map(async (game, index) => {
+                    if (global.twoPlayerSelected) {
+                        return {game: game, player2Profile:global.player2Profile };
+                    }else{
+                        const player1IsBlack = game.black.username.toLowerCase() === global.player1Profile?.username.toLowerCase();
+                        const player2Username = player1IsBlack
+                            ? game.white.username
+                            : game.black.username;
+
+                        const player2ProfileInfo: ChessPlayerProfile = await GetDataFrom(
+                            "https://api.chess.com/pub/player/" + player2Username.trim().toLowerCase()
+                        );
+                        return {game: game, player2Profile:player2ProfileInfo };
+                    }
+                })
+            ))
+
+            if (!cancelled) {
+                setVisible(true);
+                setGamesToRender(nextGamesToRender);
+            }
+        }
+        GetGamesToRender();
+        return () => {
+            cancelled = true;
+        };
+    }, [global, matchHistorySize]);
 
     return (
         <div id="matchHistoryContainer">
@@ -72,135 +108,75 @@ export default function MatchHistory() {
                 <option value={100}>100 Games</option>
             </select>
 
-            <div className="match-history-descr">
-                <div>Flag</div>
-                <div>League</div>
-                <div>Name/Date</div>
-                <div>Rating</div>
-                <div>Color</div>
-                <div>Acc</div>
-                <div>Mode</div>
-                <div>Moves</div>
-                <div>Result</div>
+            <div style={{display: visible?"block":"flex", border: "1px solid black", borderRadius: "10px", overflow:"hidden"}}>
+                <div className="match-history-descr">
+                    <div>Flag</div>
+                    <div>League</div>
+                    <div>Name/Date</div>
+                    <div>Rating</div>
+                    <div>Color</div>
+                    <div>Acc</div>
+                    <div>Mode</div>
+                    <div>Moves</div>
+                    <div>Result</div>
+                </div>
+
+                <div className="match-history-list-container">
+                    {gamesToRender.map((gameInfo, index) =>
+                    {
+                        return(
+                            <MatchHistoryElement
+                                game={gameInfo.game}
+                                player2Profile={gameInfo.player2Profile}
+                            />
+                        )
+                    })}
+                </div>
             </div>
 
-            <div className="match-history-list-container" id="matchHistoryListContainer">
-                {global.foundGames.map((game, index) =>
-                {
-                    if(index >= matchHistorySize)return <></>;
-                    return(
-                        <MatchHistoryElement
-                            game={game}
-                            key={index}
-                        />
-                    )
-                }
-
-                )}
-            </div>
         </div>)
 }
 
-function MatchHistoryElement({game}: { game: ChessGame }) {
+function MatchHistoryElement({game, player2Profile}: { game: ChessGame, player2Profile: ChessPlayerProfile|undefined}) {
     const {global} = useGlobal();
 
     type PlayerGameInfo = {
-        countryISOCode: string;
         colorIcon: string;
-        leagueIcon: string;
         accuracy: number | undefined;
-        rating: number | undefined;
+        rating: string | number;
     }
 
-    const [player2Info, setPlayer2Info] = useState<ChessPlayerProfile>();
-    const [player1GameInfo, setPlayer1GameInfo] = useState<PlayerGameInfo>();
-    const [player2GameInfo, setPlayer2GameInfo] = useState<PlayerGameInfo>();
-    const [backgroundColor, setBackgroundColor] = useState<string>("gray");
-    const [result, setResult] = useState<number>(0);
+    const player1IsBlack = game.black.username.toLowerCase() === global.player1Profile?.username.toLowerCase();
+
+    let result = 0;
+    if (player1IsBlack) {
+        if (game.black.result === "win") result = 1;
+        else if (game.white.result === "win") result = 2;
+    } else {
+        if (game.white.result === "win") result = 1;
+        else if (game.black.result === "win") result = 2;
+    }
+
+    const backgroundColor =
+        result === 1
+            ? "rgb(57, 103, 66)"
+            : result === 2
+                ? global.twoPlayerSelected
+                    ? "#004F80"
+                    : "rgb(198,65,65)"
+                : "gray"
 
 
-    useEffect(() => {
-        let cancelled = false;
-
-        async function getPlayersInfo() {
-            if (!global.player1Info) return;
-
-            const player1IsBlack = game.black.username.toLowerCase() === global.player1Info.username.toLowerCase();
-            const player1Country = global.player1Info.country?.split("country/")[1] ?? "";
-            if (!cancelled) {
-                let player1Rating = player1IsBlack ? game.black.rating : game.white.rating;
-                setPlayer1GameInfo({
-                    countryISOCode: player1Country,
-                    colorIcon: player1IsBlack ? bkIcon : wkIcon,
-                    leagueIcon: GetLeagueIcon(global.player1Info.league),
-                    accuracy: player1IsBlack ? game.accuracies?.black : game.accuracies?.white,
-                    rating: game.rated ? player1Rating : undefined,
-                });
-            }
-
-            if (global.twoPlayerSelected) {
-                const player2Country = global.player2Info?.country?.split("country/")[1] ?? "";
-                if (!cancelled) {
-                    setPlayer2Info(global.player2Info ?? undefined);
-                    let player2Rating = player1IsBlack ? game.white.rating : game.black.rating;
-                    setPlayer2GameInfo({
-                        countryISOCode: player2Country,
-                        colorIcon: player1IsBlack ? wkIcon : bkIcon,
-                        leagueIcon: GetLeagueIcon(global.player2Info?.league),
-                        accuracy: player1IsBlack ? game.accuracies?.white : game.accuracies?.black,
-                        rating: game.rated ? player2Rating : undefined,
-                    });
-                }
-            } else {
-
-                const player2Username = player1IsBlack
-                    ? game.white.username
-                    : game.black.username;
-
-                const player2ProfileInfo: ChessPlayerProfile = await GetDataFrom(
-                    "https://api.chess.com/pub/player/" + player2Username.trim().toLowerCase()
-                );
-
-                if (!cancelled) {
-                    setPlayer2Info(player2ProfileInfo);
-                    let player2Rating = player1IsBlack ? game.white.rating : game.black.rating;
-                    setPlayer2GameInfo({
-                        countryISOCode: player2ProfileInfo?.country?.split("country/")[1],
-                        colorIcon: player1IsBlack ? wkIcon : bkIcon,
-                        leagueIcon: GetLeagueIcon(player2ProfileInfo.league),
-                        accuracy: player1IsBlack ? game.accuracies?.white : game.accuracies?.black,
-                        rating: game.rated ? player2Rating : undefined,
-                    });
-                }
-            }
-
-            const isPlayer1Black =
-                game.black.username.toLowerCase() === global.player1Info.username.toLowerCase();
-
-            let nextResult = 0;
-
-            if (isPlayer1Black) {
-                if (game.black.result === "win") nextResult = 1;
-                else if (game.white.result === "win") nextResult = 2;
-                else nextResult = 0;
-            } else {
-                if (game.white.result === "win") nextResult = 1;
-                else if (game.black.result === "win") nextResult = 2;
-                else nextResult = 0;
-            }
-
-            if (!cancelled) {
-                if (nextResult === 1) setBackgroundColor(global.twoPlayerSelected ? "#004F80" : "rgb(198,65,65)")
-                if (nextResult === 2) setBackgroundColor("rgb(57, 103, 66)")
-                setResult(nextResult);
-            }
-        }
-
-        getPlayersInfo();
-        return () => {
-            cancelled = true;
-        };
-    }, [game, global.player1Info, global.player2Info, global.twoPlayerSelected]);
+    const player1GameInfo: PlayerGameInfo ={
+        colorIcon: player1IsBlack ? bkIcon : wkIcon,
+        accuracy: player1IsBlack ? game.accuracies?.black : game.accuracies?.white,
+        rating: game.rated ? player1IsBlack ? game.black.rating: game.white.rating : "",
+    }
+    const player2GameInfo: PlayerGameInfo = {
+        colorIcon: player1IsBlack ? wkIcon : bkIcon,
+        accuracy: player1IsBlack ? game.accuracies?.white : game.accuracies?.black,
+        rating: game.rated ? player1IsBlack ? game.white.rating: game.black.rating : "",
+    }
 
     function FlagIcon({countryISOCode}: { countryISOCode: string | undefined }) {
         return (
@@ -211,96 +187,97 @@ function MatchHistoryElement({game}: { game: ChessGame }) {
         );
     }
 
-    return (<div
-        className="match-history-element"
-        style={{display: "grid", backgroundColor: backgroundColor}}
-    >
-        <FlagIcon countryISOCode={player1GameInfo?.countryISOCode}/>
-
-        <img
-            style={{margin: "auto"}}
-            className="player-league-img"
-            src={player1GameInfo?.leagueIcon}
-            alt="LeagueIcon"
-        />
-
-        <a style={{margin:"auto"}}>{global.player1Info?.url.split("member/")[1]}</a>
-
-        <div>{player1GameInfo?.rating ?? ""}</div>
-
-        <img
-            className="player-color-img"
-            style={{margin: "auto"}}
-            src={player1GameInfo?.colorIcon}
-            alt="ColorIcon"
-        />
-
-        <p>{player1GameInfo?.accuracy ?? "--"}</p>
-
-        <div></div>
-        <div></div>
-
-        <p style={{margin:"auto"}} >{result === 0 ? "draw" : result === 1 ? "Win" : "Loose"}</p>
-
-        <div></div>
-        <div></div>
-
-        <p style={{margin:"auto"}}>{formatUnixTimestamp(game.end_time)}</p>
-
-        <a
-            title="Watch game"
-            href="https://www.chess.com/game/live/145592795276"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{margin:"auto"}}
+    return (
+        <div
+            className="match-history-element"
+            style={{display: "grid", backgroundColor: backgroundColor}}
         >
+            <FlagIcon countryISOCode={global.player1Profile?.country.split("country/")[1]}/>
+
             <img
-                style={{height: "18px", width: "18px", marginTop: "2px"}}
-                src={glassesIcon}
-                alt="Watch game"
+                style={{margin: "auto"}}
+                className="player-league-img"
+                src={GetLeagueIcon(global.player1Profile?.league)}
+                alt="LeagueIcon"
             />
-        </a>
 
-        <div></div>
-        <div></div>
+            <a style={{margin:"auto"}}>{global.player1Profile?.url.split("member/")[1]}</a>
 
-        <div style={{margin:"auto"}}>
+            <div>{player1GameInfo?.rating ?? ""}</div>
+
             <img
-                title={game.time_class}
-                style={{height: "20px", width: "20px"}}
-                src={GetTimeClassIcon(game.time_class)}
-                alt={game.time_class}
+                className="player-color-img"
+                style={{margin: "auto"}}
+                src={player1GameInfo?.colorIcon}
+                alt="ColorIcon"
             />
-        </div>
 
-        <p style={{margin:"auto"}}>{game.pgn.split("\n\n")[1].split(". ").length - 1}</p>
-        <p></p>
+            <p>{player1GameInfo?.accuracy ?? "--"}</p>
 
-        <FlagIcon countryISOCode={player2GameInfo?.countryISOCode}/>
+            <div></div>
+            <div></div>
 
-        <img
-            style={{margin: "auto"}}
-            className="player-league-img"
-            src={player2GameInfo?.leagueIcon}
-            alt="LeagueIcon"
-        />
+            <p style={{margin:"auto"}} >{result === 0 ? "draw" : result === 1 ? "Win" : "Loose"}</p>
 
-        <a style={{margin:"auto"}}>{player2Info ? player2Info.url.split("member/")[1] : ""}</a>
+            <div></div>
+            <div></div>
 
-        <div style={{margin:"auto"}}>{player2GameInfo?.rating ?? ""}</div>
+            <p style={{margin:"auto"}}>{formatUnixTimestamp(game.end_time)}</p>
 
-        <img
-            className="player-color-img"
-            style={{margin: "auto"}}
-            src={player2GameInfo?.colorIcon}
-            alt="ColorIcon"
-        />
+            <a
+                title="Watch game"
+                href="https://www.chess.com/game/live/145592795276"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{margin:"auto"}}
+            >
+                <img
+                    style={{height: "18px", width: "18px", marginTop: "2px"}}
+                    src={glassesIcon}
+                    alt="Watch game"
+                />
+            </a>
 
-        <p style={{margin:"auto"}}>{player2GameInfo?.accuracy ?? "--"}</p>
+            <div></div>
+            <div></div>
 
-        <div></div>
-        <div></div>
+            <div style={{margin:"auto"}}>
+                <img
+                    title={game.time_class}
+                    style={{height: "20px", width: "20px"}}
+                    src={GetTimeClassIcon(game.time_class)}
+                    alt={game.time_class}
+                />
+            </div>
 
-        <p style={{margin:"auto"}}>{result === 0 ? "draw" : result === 1 ?"Loose":"Win"}</p>
-    </div>)
+            <p style={{margin:"auto"}}>{game.pgn.split("\n\n")[1].split(". ").length - 1}</p>
+            <p></p>
+
+            <FlagIcon countryISOCode={player2Profile?.country.split("country/")[1]}/>
+
+            <img
+                style={{margin: "auto"}}
+                className="player-league-img"
+                src={GetLeagueIcon(player2Profile?.league)}
+                alt="LeagueIcon"
+            />
+
+            <a style={{margin:"auto"}}>{player2Profile ? player2Profile.url.split("member/")[1] : ""}</a>
+
+            <div style={{margin:"auto"}}>{player2GameInfo?.rating ?? ""}</div>
+
+            <img
+                className="player-color-img"
+                style={{margin: "auto"}}
+                src={player2GameInfo?.colorIcon}
+                alt="ColorIcon"
+            />
+
+            <p style={{margin:"auto"}}>{player2GameInfo?.accuracy ?? "--"}</p>
+
+            <div></div>
+            <div></div>
+
+            <p style={{margin:"auto"}}>{result === 0 ? "draw" : result === 1 ?"Loose":"Win"}</p>
+        </div>)
 }

@@ -2,8 +2,8 @@ import  { createContext, useContext, useState, type ReactNode } from 'react';
 import {ChessGame, ChessPlayerProfile} from "./types";
 interface GlobalState {
     foundGames:ChessGame[],
-    player1Info:ChessPlayerProfile|null,
-    player2Info:ChessPlayerProfile|null,
+    player1Profile:ChessPlayerProfile|undefined,
+    player2Profile:ChessPlayerProfile|undefined,
     twoPlayerSelected:boolean,
 }
 
@@ -17,8 +17,8 @@ const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     const [global, setGlobalInternal] = useState<GlobalState>({
         foundGames:[],
-        player1Info:null,
-        player2Info:null,
+        player1Profile:undefined,
+        player2Profile:undefined,
         twoPlayerSelected:false
     });
 

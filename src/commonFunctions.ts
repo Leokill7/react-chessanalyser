@@ -1,4 +1,5 @@
-export async function GetDataFrom(link) {
+import {ChessGame} from "./types";
+export async function GetDataFrom(link:string) {
     return await fetch(link)
         .then(response => {
             if (!response.ok) {
@@ -12,10 +13,9 @@ export async function GetDataFrom(link) {
         })
         .catch(error => {
             console.error('There was a problem with the fetch operation:', error);
-            //alert("the player does not exist")
         });
 }
-export function formatUnixTimestamp(unixTimestamp) {
+export function formatUnixTimestamp(unixTimestamp:number) {
     const date = new Date(unixTimestamp * 1000);
 
     const year = date.getFullYear();
@@ -26,8 +26,8 @@ export function formatUnixTimestamp(unixTimestamp) {
 
     return `${year}.${month}.${day} ${hours}:${minutes}`;
 }
-export function GetFlagCoordinates(flagID){
-    if(flagID == undefined || flagID == ""){
+export function GetFlagCoordinates(flagID:string | undefined ) {
+    if(flagID === "" || flagID === undefined){
         return;
     }
 

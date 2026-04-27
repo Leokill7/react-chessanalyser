@@ -1,27 +1,38 @@
 import React, {RefObject, useEffect, useRef, useState} from 'react';
 import logo from './logo.svg';
-import {GetDataFrom} from "./commonFunctions.js";
+import {GetDataFrom} from "./commonFunctions";
 import './App.css';
 import SearchFilter from "./SearchFilter/SearchFilter";
 import MatchHistory from "./MatchHistory/MatchHistory";
 import {useGlobal} from "./GlobalContext";
 import {ChessGame} from "./types";
+import BaseStatsForTwoSelected, {
+    BaseStatsForOneSelected,
+    GameResultOverviewForOneSelected,
+    GameResultOverviewForTwoSelected
+} from "./BaseInformation/BaseStats";
+import RatingChart from "./Charts/RatingChart";
 
 async function getAllGamesOf(playerName:string) {
     if(playerName === undefined){
         return []
     }
-    let links = await GetDataFrom("https://api.chess.com/pub/player/"+ playerName+"/games/archives");
-    links = links.archives;
-    let games: any[] = [];
-    const gamesArray = await getAllMonthGames(links)
+    try{
+        let links = await GetDataFrom("https://api.chess.com/pub/player/"+ playerName+"/games/archives");
+        links = links.archives;
+        let games: any[] = [];
+        const gamesArray = await getAllMonthGames(links)
 
-    for(let i = 0; i < gamesArray.length; i++){
-        gamesArray[i].games.forEach((game: any) => {
-            games.push(game)
-        })
+        for(let i = 0; i < gamesArray.length; i++){
+            gamesArray[i].games.forEach((game: any) => {
+                games.push(game)
+            })
+        }
+        return games;
+    }catch(e){
+        console.error(e)
     }
-    return games;
+    return []
 }
 async function getAllMonthGames(links: string[]){
     const functions = links.map(GetDataFrom)
@@ -31,7 +42,7 @@ async function getAllMonthGames(links: string[]){
 function App() {
     const { global, setGlobal } = useGlobal();
     const [optionsVisible,setOptionsVisible] = useState(true);
-    const [resultsVisible,setResultsVisible] = useState(true);
+    const [resultsVisible,setResultsVisible] = useState(false);
 
     const player1NameInput = useRef<HTMLInputElement>(null);
     const player2NameInput = useRef<HTMLInputElement>(null);
@@ -49,10 +60,10 @@ function App() {
     const filterGameAmountSlider = useRef<HTMLInputElement>(null);
 
     async function searchResults(){
+        setResultsVisible(false)
         setOptionsVisible(false);
-        setResultsVisible(true)
-        setGlobal({player2Info:null});
-        setGlobal({player1Info:null});
+        setGlobal({player2Profile:undefined});
+        setGlobal({player1Profile:undefined});
 
         if(!player1NameInput.current || !player2NameInput.current){
             return;
@@ -72,16 +83,15 @@ function App() {
 
         let twoPlayersSearched = false;
 
-        setGlobal({player1Info:await GetDataFrom("https://api.chess.com/pub/player/"+ player1Name)});
+        setGlobal({player1Profile:await GetDataFrom("https://api.chess.com/pub/player/"+ player1Name)});
         if(player2Name !== ""){
-            setGlobal({player2Info:await GetDataFrom("https://api.chess.com/pub/player/"+ player2Name)});
+            setGlobal({player2Profile:await GetDataFrom("https://api.chess.com/pub/player/"+ player2Name)});
             twoPlayersSearched = true;
         }
 
         setGlobal({twoPlayerSelected:twoPlayersSearched});
 
         let results:ChessGame[] = await getAllGamesOf(player1Name);
-        results = results.reverse();
         results = filterGames(results,player1Name.toLowerCase(),player2Name.toLowerCase(), twoPlayersSearched)
         setGlobal({foundGames:results});
 
@@ -103,6 +113,8 @@ function App() {
         if(results.length > 10000){
             alert("The given account has more the 10000 games played. Browser performance may suffer")
         }
+
+        setResultsVisible(true)
     }
 
     function filterGames(gamesToFilter:any[],player1:string,player2:string,twoPlayerSelected:boolean){
@@ -277,7 +289,17 @@ function App() {
               <p style={{ display: "inline-block" }}>Loading games can take up to 15s</p>
               <div className="loader"></div>
           </div>
-          <div id="generatedContent" style={{ margin: "auto", textAlign: "center" , width:"600px"}}>
+          <div id="generatedContent" style={{ margin: "auto", textAlign: "center" , width:"600px", display: resultsVisible? "block" : "none" }}>
+              {global.twoPlayerSelected?
+                  <>
+                      <BaseStatsForTwoSelected/>
+                    <GameResultOverviewForTwoSelected/>
+                  </>:
+                  <>
+                      <BaseStatsForOneSelected/>
+                      <GameResultOverviewForOneSelected/>
+                      <RatingChart/>
+                  </>}
               <MatchHistory/>
           </div>
       </div>
