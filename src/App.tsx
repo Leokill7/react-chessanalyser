@@ -4,6 +4,7 @@ import {GetDataFrom} from "./commonFunctions";
 import './App.css';
 import SearchFilter from "./SearchFilter/SearchFilter";
 import MatchHistory from "./MatchHistory/MatchHistory";
+import ChartWrapper from "./Charts/ChartWrapper";
 import {useGlobal} from "./GlobalContext";
 import {ChessGame} from "./types";
 import BaseStatsForTwoSelected, {
@@ -298,7 +299,7 @@ function App() {
                   <>
                       <BaseStatsForOneSelected/>
                       <GameResultOverviewForOneSelected/>
-                      <RatingChart/>
+                      <ChartWrapper/>
                   </>}
               <MatchHistory/>
           </div>
