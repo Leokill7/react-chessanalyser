@@ -58,7 +58,6 @@ export default function BaseStatsForTwoSelected() {
             if (moveCount > acc.longestMoveCount) {
                 acc.longestGame = game;
                 acc.longestMoveCount = moveCount;
-                console.log(acc.longestMoveCount)
             }
 
             if (moveCount < acc.shortestMoveCount) {
@@ -84,7 +83,7 @@ export default function BaseStatsForTwoSelected() {
     const shortestMoveCount = gameStats.shortestMoveCount;
     const averageMoveCount = gameStats.totalMoveCount / global.foundGames.length;
 
-    return (<div>
+    return (<div style={{margin:"auto"}}>
         <div className="two-player-display-container">
             <div><a href={global.player1Profile?.url} style={{fontSize:"xx-large",fontWeight: 800}} target={"_blank"} rel="noreferrer">{player1Name}</a>
                 <div title={"Average Accurracy in " + player1Accuracies.length + " games"}>{player1AvgAcc.toFixed(2)} %</div>
@@ -135,12 +134,15 @@ export function BaseStatsForOneSelected() {
 
     const gameStats = global.foundGames.reduce(
         (acc, game) => {
+            if(!game.pgn){
+                return acc;
+            }
+
             const moveCount = game.pgn.split("\n\n")[1].split(". ").length - 1;
 
             if (moveCount > acc.longestMoveCount) {
                 acc.longestGame = game;
                 acc.longestMoveCount = moveCount;
-                console.log(acc.longestMoveCount)
             }
 
             if (moveCount < acc.shortestMoveCount) {
@@ -168,7 +170,14 @@ export function BaseStatsForOneSelected() {
 
     return (<div>
         <div className="one-player-display-container">
-            <div><a href={global.player1Profile?.url} style={{fontSize:"xx-large",fontWeight: 800}} target={"_blank"} rel="noreferrer">{player1Name}</a>
+            <div>
+                <a
+                    href={global.player1Profile?.url}
+                    style={{fontSize:"xx-large",fontWeight: 800}}
+                    target={"_blank"} rel="noreferrer"
+                >
+                    {player1Name}
+                </a>
                 <div title={"Average Accuracy in " + player1Accuracies.length + " games"}>Accuracy: {player1AvgAcc.toFixed(2)} %</div>
             </div>
         </div>
@@ -511,7 +520,11 @@ export function GameResultOverviewForOneSelected(){
                 {
                     gridElements.map((elementInfo, index) => {
                         return (
-                            <div className="game-details-container" style={{backgroundColor:elementInfo.color, borderRight: index === gridElements.length-1 ? "0px solid black" : "1px solid black"}} title={elementInfo.gameCount + " games "+ elementInfo.description}></div>
+                            <div
+                                key={index}
+                                className="game-details-container"
+                                style={{backgroundColor:elementInfo.color, borderRight: index === gridElements.length-1 ? "0px solid black" : "1px solid black"}}
+                                title={elementInfo.gameCount + " games "+ elementInfo.description}/>
                         )
                     })
                 }

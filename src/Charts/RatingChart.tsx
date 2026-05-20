@@ -82,6 +82,7 @@ export default function RatingChart() {
             textStyle: {
                 color: "#d1d5db",
             },
+            icon: "circle",
         },
         tooltip: {
             trigger: "item",
@@ -132,7 +133,7 @@ export default function RatingChart() {
                 type: "line",
                 data: r.data,
                 symbol: "circle",
-                symbolSize: 7,
+                symbolSize: 5,
                 showSymbol: true,
                 lineStyle: {
                     width: 3,
@@ -155,8 +156,16 @@ export default function RatingChart() {
                     moveOverlap: "shiftY",
                 },
                 emphasis: {
-                    disabled: true,
-                }
+                    scale: true,
+                    itemStyle: {
+                        symbolSize: 12,
+                        borderWidth: 2,
+                        borderColor: r.color,
+                        color: "#1f2937",
+                        shadowBlur: 6,
+                        shadowColor: r.color,
+                    },
+                },
             }
         }),
     };

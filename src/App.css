@@ -1,7 +1,15 @@
 .App {
   text-align: center;
 }
+:root {
+   --container-width: 800px;
+ }
 
+@media (max-width: 1200px) {
+  :root {
+    --container-width: 70%;
+  }
+}
 .App-logo {
   height: 40vmin;
   pointer-events: none;

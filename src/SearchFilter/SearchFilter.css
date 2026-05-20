@@ -2,7 +2,7 @@
     padding: 10px;
     display: inline-block;
     background-color: var(--button-background-color);
-    margin: 10px 0;
+
     border: var(--button-border-color) 1px solid;
     border-radius: 10px;
 }
@@ -15,9 +15,9 @@
 }
 .filter-icon{
     height: 20px;
+    aspect-ratio: 1;
 }
 .filter-icon-checkbox-container {
-    display: inline-flex;
-    align-items: center;
+    display: flex;
     margin: 2px
 }

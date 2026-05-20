@@ -72,8 +72,8 @@ button:focus{
     margin-left: 2px;
 }
 .match-history-list-container{
-    height:400px;
-    overflow:auto;
+    max-height: 600px;
+    overflow-y:auto;
 }
 .match-history-list-container::-webkit-scrollbar-track {
     background: var(--button-background-color);

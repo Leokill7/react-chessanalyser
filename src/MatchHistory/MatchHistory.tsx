@@ -67,9 +67,10 @@ export default function MatchHistory() {
         setVisible(false);
         let cancelled = false;
         async function GetGamesToRender() {
+            let reversedGames = [...global.foundGames].reverse();
 
             let nextGamesToRender = (await Promise.all(
-                global.foundGames.reverse().slice(0, matchHistorySize).map(async (game, index) => {
+                reversedGames.slice(0, matchHistorySize).map(async (game, index) => {
                     if (global.twoPlayerSelected) {
                         return {game: game, player2Profile:global.player2Profile };
                     }else{
@@ -98,7 +99,7 @@ export default function MatchHistory() {
     }, [global, matchHistorySize]);
 
     return (
-        <div id="matchHistoryContainer">
+        <div>
             <div className="games-played-text">MatchHistory</div>
 
             <select className="graph-select" onChange={(e) => setMatchHistorySize(Number(e.target.value))}>
@@ -108,7 +109,7 @@ export default function MatchHistory() {
                 <option value={100}>100 Games</option>
             </select>
 
-            <div style={{display: visible?"block":"flex", border: "1px solid black", borderRadius: "10px", overflow:"hidden"}}>
+            <div style={{display: visible?"block":"none", border: "1px solid black", borderRadius: "10px", overflow:"hidden"}}>
                 <div className="match-history-descr">
                     <div>Flag</div>
                     <div>League</div>
@@ -126,8 +127,10 @@ export default function MatchHistory() {
                     {
                         return(
                             <MatchHistoryElement
+                                key={index}
                                 game={gameInfo.game}
                                 player2Profile={gameInfo.player2Profile}
+                                gameIndex={index}
                             />
                         )
                     })}
@@ -137,13 +140,13 @@ export default function MatchHistory() {
         </div>)
 }
 
-function MatchHistoryElement({game, player2Profile}: { game: ChessGame, player2Profile: ChessPlayerProfile|undefined}) {
+function MatchHistoryElement({game, player2Profile,gameIndex}: { game: ChessGame, player2Profile: ChessPlayerProfile|undefined, gameIndex: number}) {
     const {global} = useGlobal();
 
     type PlayerGameInfo = {
         colorIcon: string;
         accuracy: number | undefined;
-        rating: string | number;
+        rating: number | undefined;
     }
 
     const player1IsBlack = game.black.username.toLowerCase() === global.player1Profile?.username.toLowerCase();
@@ -170,13 +173,30 @@ function MatchHistoryElement({game, player2Profile}: { game: ChessGame, player2P
     const player1GameInfo: PlayerGameInfo ={
         colorIcon: player1IsBlack ? bkIcon : wkIcon,
         accuracy: player1IsBlack ? game.accuracies?.black : game.accuracies?.white,
-        rating: game.rated ? player1IsBlack ? game.black.rating: game.white.rating : "",
+        rating: game.rated ? player1IsBlack ? game.black.rating: game.white.rating : undefined,
     }
     const player2GameInfo: PlayerGameInfo = {
         colorIcon: player1IsBlack ? wkIcon : bkIcon,
         accuracy: player1IsBlack ? game.accuracies?.white : game.accuracies?.black,
-        rating: game.rated ? player1IsBlack ? game.white.rating: game.black.rating : "",
+        rating: game.rated ? player1IsBlack ? game.white.rating: game.black.rating : undefined,
     }
+
+    let gainedRR:number |undefined = undefined;
+    if(game.rated){
+        let reversedGames = [...global.foundGames].reverse()
+        for (let i = gameIndex+1; i < reversedGames.length; i++) {
+            const gameInfo = reversedGames[i];
+            if (gameInfo.rated && game.rules === gameInfo.rules && game.time_class === gameInfo.time_class) {
+                const player1IsBlackInPrevious = gameInfo.black.username.toLowerCase() === global.player1Profile?.username.toLowerCase();
+                const previousRR = player1IsBlackInPrevious ? gameInfo.black.rating : gameInfo.white.rating;
+                if(player1GameInfo?.rating!=undefined){
+                    gainedRR = player1GameInfo?.rating - previousRR;
+                    break;
+                }
+            }
+        }
+    }
+
 
     function FlagIcon({countryISOCode}: { countryISOCode: string | undefined }) {
         return (
@@ -203,7 +223,15 @@ function MatchHistoryElement({game, player2Profile}: { game: ChessGame, player2P
 
             <a style={{margin:"auto"}}>{global.player1Profile?.url.split("member/")[1]}</a>
 
-            <div>{player1GameInfo?.rating ?? ""}</div>
+            <div style={{display: "flex",justifyContent:"center",alignItems:"center",gap:"4px"}}>
+                <div>{player1GameInfo?.rating ?? player1GameInfo?.rating}</div>
+                {
+                    gainedRR !== undefined &&
+                    <div>
+                        {player1GameInfo?.rating?"("+(gainedRR>0?"+":"")+gainedRR+")":""}
+                    </div>
+                }
+            </div>
 
             <img
                 className="player-color-img"
@@ -226,7 +254,7 @@ function MatchHistoryElement({game, player2Profile}: { game: ChessGame, player2P
 
             <a
                 title="Watch game"
-                href="https://www.chess.com/game/live/145592795276"
+                href={game.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{margin:"auto"}}
@@ -264,7 +292,7 @@ function MatchHistoryElement({game, player2Profile}: { game: ChessGame, player2P
 
             <a style={{margin:"auto"}}>{player2Profile ? player2Profile.url.split("member/")[1] : ""}</a>
 
-            <div style={{margin:"auto"}}>{player2GameInfo?.rating ?? ""}</div>
+            <div style={{margin:"auto"}}>{player2GameInfo?.rating===Number.MAX_SAFE_INTEGER?"":player2GameInfo?.rating}</div>
 
             <img
                 className="player-color-img"

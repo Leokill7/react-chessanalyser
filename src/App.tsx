@@ -13,6 +13,7 @@ import BaseStatsForTwoSelected, {
     GameResultOverviewForTwoSelected
 } from "./BaseInformation/BaseStats";
 import RatingChart from "./Charts/RatingChart";
+import { useSearchParams } from 'react-router-dom';
 
 async function getAllGamesOf(playerName:string) {
     if(playerName === undefined){
@@ -41,24 +42,28 @@ async function getAllMonthGames(links: string[]){
 }
 
 function App() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const { global, setGlobal } = useGlobal();
-    const [optionsVisible,setOptionsVisible] = useState(true);
+    const [optionsVisible,setOptionsVisible] = useState(false);
     const [resultsVisible,setResultsVisible] = useState(false);
 
-    const player1NameInput = useRef<HTMLInputElement>(null);
-    const player2NameInput = useRef<HTMLInputElement>(null);
-    const filterWhiteCheckbox = useRef<HTMLInputElement>(null);
-    const filterBlackCheckbox = useRef<HTMLInputElement>(null);
-    const filterDailyCheckbox = useRef<HTMLInputElement>(null);
-    const filterRapidCheckbox = useRef<HTMLInputElement>(null);
-    const filterBlitzCheckbox = useRef<HTMLInputElement>(null);
-    const filterBulletCheckbox = useRef<HTMLInputElement>(null);
-    const filterBughouseCheckbox = useRef<HTMLInputElement>(null);
-    const filter960ChessCheckbox = useRef<HTMLInputElement>(null);
-    const filterThreeCheckCheckbox = useRef<HTMLInputElement>(null);
-    const filterKotHCheckbox = useRef<HTMLInputElement>(null);
-    const filterCrazyhouseCheckbox = useRef<HTMLInputElement>(null);
-    const filterGameAmountSlider = useRef<HTMLInputElement>(null);
+    const [player1NameInputValue,setPlayer1NameInputValue] = useState<string>(searchParams.get("player1Name") ?? "");
+    const [player2NameInputValue,setPlayer2NameInputValue] = useState<string>(searchParams.get("player2Name") ?? "");
+
+    const [nonRankedChecked, setNonRankedChecked]   = useState<boolean>(searchParams.get("nonRankedChecked")   !== "false");
+    const [rankedChecked, setRankedChecked]         = useState<boolean>(searchParams.get("rankedChecked")       !== "false");
+    const [whiteChecked, setWhiteChecked]           = useState<boolean>(searchParams.get("whiteChecked")        !== "false");
+    const [blackChecked, setBlackChecked]           = useState<boolean>(searchParams.get("blackChecked")        !== "false");
+    const [dailyChecked, setDailyChecked]           = useState<boolean>(searchParams.get("dailyChecked")        !== "false");
+    const [rapidChecked, setRapidChecked]           = useState<boolean>(searchParams.get("rapidChecked")        !== "false");
+    const [blitzChecked, setBlitzChecked]           = useState<boolean>(searchParams.get("blitzChecked")        !== "false");
+    const [bulletChecked, setBulletChecked]         = useState<boolean>(searchParams.get("bulletChecked")       !== "false");
+    const [bughouseChecked, setBughouseChecked]     = useState<boolean>(searchParams.get("bughouseChecked")     !== "false");
+    const [chess960Checked, setChess960Checked]     = useState<boolean>(searchParams.get("chess960Checked")     !== "false");
+    const [threeCheckChecked, setThreeCheckChecked] = useState<boolean>(searchParams.get("threeCheckChecked")   !== "false");
+    const [kotHChecked, setKotHChecked]             = useState<boolean>(searchParams.get("kotHChecked")         !== "false");
+    const [crazyhouseChecked, setCrazyhouseChecked] = useState<boolean>(searchParams.get("crazyhouseChecked")   !== "false");
+    const [gameAmountSliderValue, setGameAmountSliderValue] = useState<number>(Number(searchParams.get("gameAmountSliderValue"))    || 5);
 
     async function searchResults(){
         setResultsVisible(false)
@@ -66,12 +71,27 @@ function App() {
         setGlobal({player2Profile:undefined});
         setGlobal({player1Profile:undefined});
 
-        if(!player1NameInput.current || !player2NameInput.current){
-            return;
-        }
+        let player1Name = player1NameInputValue;
+        let player2Name = player2NameInputValue;
 
-        let player1Name = player1NameInput.current.value;
-        let player2Name = player2NameInput.current.value;
+        setSearchParams({
+            player1Name:        player1NameInputValue,
+            player2Name:        player2NameInputValue,
+            nonRankedChecked:   String(nonRankedChecked),
+            rankedChecked:      String(rankedChecked),
+            whiteChecked:       String(whiteChecked),
+            blackChecked:       String(blackChecked),
+            dailyChecked:       String(dailyChecked),
+            rapidChecked:       String(rapidChecked),
+            blitzChecked:       String(blitzChecked),
+            bulletChecked:      String(bulletChecked),
+            bughouseChecked:    String(bughouseChecked),
+            chess960Checked:    String(chess960Checked),
+            threeCheckChecked:  String(threeCheckChecked),
+            kotHChecked:        String(kotHChecked),
+            crazyhouseChecked:  String(crazyhouseChecked),
+            gameAmountSliderValue:         String(gameAmountSliderValue),
+        });
 
         if(player1Name === "" && player2Name !== ""){
             player1Name = player2Name;
@@ -97,13 +117,8 @@ function App() {
         setGlobal({foundGames:results});
 
         if(results.length === 0){
-            if (
-                !filterWhiteCheckbox.current ||
-                !filterBlackCheckbox.current){
-                return;
-            }
 
-            if(!filterWhiteCheckbox.current.checked && !filterBlackCheckbox.current.checked){
+            if(!whiteChecked && !blackChecked){
                 alert("Select a Color")
             }else{
                 alert("For the given account were no games with this specification found")
@@ -119,78 +134,59 @@ function App() {
     }
 
     function filterGames(gamesToFilter:any[],player1:string,player2:string,twoPlayerSelected:boolean){
-        if (
-            !filterWhiteCheckbox.current ||
-            !filterBlackCheckbox.current ||
-            !filterDailyCheckbox.current ||
-            !filterRapidCheckbox.current ||
-            !filterBlitzCheckbox.current ||
-            !filterBulletCheckbox.current ||
-            !filterBughouseCheckbox.current ||
-            !filter960ChessCheckbox.current ||
-            !filterThreeCheckCheckbox.current ||
-            !filterKotHCheckbox.current ||
-            !filterCrazyhouseCheckbox.current ||
-            !filterGameAmountSlider.current
-        ) {
-            return [];
-        }
-        let gameCountToFilter:number = filterGameAmountSlider.current.valueAsNumber;
-        if(gamesToFilter.length<gameCountToFilter){
-            gameCountToFilter = gamesToFilter.length
+
+        let gameCountToFilter:number = 0;
+        switch(gameAmountSliderValue){
+            case 0: gameCountToFilter = 1; break;
+            case 1: gameCountToFilter = 10; break;
+            case 2: gameCountToFilter = 50; break;
+            case 3: gameCountToFilter = 100; break;
+            case 4: gameCountToFilter = 500; break;
+            case 5: gameCountToFilter = gamesToFilter.length; break;
         }
 
         gamesToFilter = gamesToFilter.filter((game:any) => {
-            if (
-                !filterWhiteCheckbox.current ||
-                !filterBlackCheckbox.current ||
-                !filterDailyCheckbox.current ||
-                !filterRapidCheckbox.current ||
-                !filterBlitzCheckbox.current ||
-                !filterBulletCheckbox.current ||
-                !filterBughouseCheckbox.current ||
-                !filter960ChessCheckbox.current ||
-                !filterThreeCheckCheckbox.current ||
-                !filterKotHCheckbox.current ||
-                !filterCrazyhouseCheckbox.current ||
-                !filterGameAmountSlider.current
-            ) {
+
+            if(game.rated && !rankedChecked){
+                return false;
+            }
+            if(!game.rated && !nonRankedChecked){
                 return false;
             }
 
-            if(!filterWhiteCheckbox.current.checked && game.white.username.toLowerCase() === player1){
+            if(!whiteChecked && game.white.username.toLowerCase() === player1){
                 return false;
             }
-            if(!filterBlackCheckbox.current.checked && game.black.username.toLowerCase() === player1){
+            if(!blackChecked && game.black.username.toLowerCase() === player1){
                 return false;
             }
             if(game.rules === "chess" || game.rules === "oddschess"){
-                if(!filterDailyCheckbox.current.checked && game.time_class === "daily"){
+                if(!dailyChecked && game.time_class === "daily"){
                     return false;
                 }
-                if(!filterRapidCheckbox.current.checked && game.time_class === "rapid"){
+                if(!rapidChecked && game.time_class === "rapid"){
                     return false;
                 }
-                if(!filterBlitzCheckbox.current.checked && game.time_class === "blitz"){
+                if(!blitzChecked && game.time_class === "blitz"){
                     return false;
                 }
-                if(!filterBulletCheckbox.current.checked && game.time_class === "bullet"){
+                if(!bulletChecked && game.time_class === "bullet"){
                     return false;
                 }
             }else{
-                if(!filterBughouseCheckbox.current.checked && game.rules === "bughouse"){
+                if(!bughouseChecked && game.rules === "bughouse"){
                     return false;
                 }
-                if(!filter960ChessCheckbox.current.checked && game.rules === "chess960"){
+                if(!chess960Checked && game.rules === "chess960"){
                     return false;
                 }
-                if(!filterThreeCheckCheckbox.current.checked && game.rules === "threecheck"){
+                if(!threeCheckChecked && game.rules === "threecheck"){
                     return false;
                 }
-                if(!filterKotHCheckbox.current.checked && game.rules === "kingofthehill"){
+                if(!kotHChecked && game.rules === "kingofthehill"){
                     return false;
                 }
-                if(!filterCrazyhouseCheckbox.current.checked && game.rules === "crazyhouse"){
+                if(!crazyhouseChecked && game.rules === "crazyhouse"){
                     return false;
                 }
             }
@@ -209,12 +205,13 @@ function App() {
             })
         }
 
-
-        return gamesToFilter.filter((game:any,index:number) => index < gamesToFilter.length*(gameCountToFilter*0.01));
+        gamesToFilter = gamesToFilter.slice(gamesToFilter.length-gameCountToFilter, gamesToFilter.length);
+        console.log(gamesToFilter);
+        return gamesToFilter;
     }
 
     return (
-      <div id="canvas" style={{textAlign: "center" }}>
+      <div style={{textAlign: "center",width:"var(--container-width)",margin:"auto" }}>
           <div style={{ margin: 20 }}>
               <h2>Chess.com Analyser</h2>
           </div>
@@ -223,31 +220,29 @@ function App() {
               <div style={{ textAlign: "center" }}>
                   <input
                       type="text"
-                      id="player1Input"
                       name="playername"
                       className="name-input"
                       spellCheck={false}
                       placeholder="playername"
-                      ref={player1NameInput}
-
+                      value={player1NameInputValue}
+                      onChange={(e) => { setPlayer1NameInputValue(e.target.value); }}
                   />
 
                   <h5 style={{ display: "inline-block" }}>VS</h5>
 
                   <input
                       type="text"
-                      id="player2Input"
                       name="playername"
                       className="name-input"
                       spellCheck={false}
                       placeholder="playername or nothing"
-                      ref={player2NameInput}
+                      value={player2NameInputValue}
+                      onChange={(e) => { setPlayer2NameInputValue(e.target.value); }}
                   />
               </div>
 
               <button
                   type="button"
-                  id="advancedOptionsButton"
                   className="more-options-button"
                   onClick={() => {setOptionsVisible(!optionsVisible); }}
               >
@@ -258,18 +253,34 @@ function App() {
 
               <div style={{display: (optionsVisible ? "block" : "none")}}>
                   <SearchFilter
-                      filterBlitzCheckbox={filterBlitzCheckbox}
-                      filterBulletCheckbox={filterBulletCheckbox}
-                      filterDailyCheckbox={filterDailyCheckbox}
-                      filterBughouseCheckbox={filterBughouseCheckbox}
-                      filter960ChessCheckbox={filter960ChessCheckbox}
-                      filterThreeCheckCheckbox={filterThreeCheckCheckbox}
-                      filterKotHCheckbox={filterKotHCheckbox}
-                      filterCrazyhouseCheckbox={filterCrazyhouseCheckbox}
-                      filterGameAmountSlider={filterGameAmountSlider}
-                      filterBlackCheckbox={filterBlackCheckbox}
-                      filterRapidCheckbox={filterRapidCheckbox}
-                      filterWhiteCheckbox={filterWhiteCheckbox}
+                      rankedChecked={rankedChecked}
+                      setRankedChecked={setRankedChecked}
+                      nonRankedChecked={nonRankedChecked}
+                      setNonRankedChecked={setNonRankedChecked}
+                      whiteChecked={whiteChecked}
+                      setWhiteChecked={setWhiteChecked}
+                      blackChecked={blackChecked}
+                      setBlackChecked={setBlackChecked}
+                      dailyChecked={dailyChecked}
+                      setDailyChecked={setDailyChecked}
+                      rapidChecked={rapidChecked}
+                      setRapidChecked={setRapidChecked}
+                      blitzChecked={blitzChecked}
+                      setBlitzChecked={setBlitzChecked}
+                      bulletChecked={bulletChecked}
+                      setBulletChecked={setBulletChecked}
+                      bughouseChecked={bughouseChecked}
+                      setBughouseChecked={setBughouseChecked}
+                      chess960Checked={chess960Checked}
+                      setChess960Checked={setChess960Checked}
+                      threeCheckChecked={threeCheckChecked}
+                      setThreeCheckChecked={setThreeCheckChecked}
+                      kotHChecked={kotHChecked}
+                      setKotHChecked={setKotHChecked}
+                      crazyhouseChecked={crazyhouseChecked}
+                      setCrazyhouseChecked={setCrazyhouseChecked}
+                      gameAmountSliderValue={gameAmountSliderValue}
+                      setGameAmountSliderValue={setGameAmountSliderValue}
                   />
               </div>
 
@@ -277,7 +288,7 @@ function App() {
 
 
               <div>
-                  <button type="submit" id="searchButton" className="search-button" onClick={(e) => {
+                  <button type="submit" className="search-button" onClick={(e) => {
                       e.preventDefault();
                       searchResults()
                   }}>
@@ -286,11 +297,11 @@ function App() {
               </div>
           </form>
 
-          <div id="loadingText" style={{ margin: "auto", textAlign: "center", display: "none" }}>
+          <div style={{ margin: "auto", textAlign: "center", display: "none" }}>
               <p style={{ display: "inline-block" }}>Loading games can take up to 15s</p>
               <div className="loader"></div>
           </div>
-          <div id="generatedContent" style={{ margin: "auto", textAlign: "center" , width:"600px", display: resultsVisible? "block" : "none" }}>
+          <div style={{ margin: "auto", textAlign: "center", display: resultsVisible? "grid" : "none" ,gap: "20px", marginBottom: "50px" }}>
               {global.twoPlayerSelected?
                   <>
                       <BaseStatsForTwoSelected/>
@@ -299,8 +310,8 @@ function App() {
                   <>
                       <BaseStatsForOneSelected/>
                       <GameResultOverviewForOneSelected/>
-                      <ChartWrapper/>
                   </>}
+              <ChartWrapper/>
               <MatchHistory/>
           </div>
       </div>
