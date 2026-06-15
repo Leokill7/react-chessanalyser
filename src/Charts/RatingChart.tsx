@@ -1,5 +1,6 @@
 import ReactECharts from "echarts-for-react";
 import { useGlobal } from "../GlobalContext";
+import {useEffect, useRef} from "react";
 
 type RatingPoint = {
     value: [number, number];
@@ -8,6 +9,16 @@ type RatingPoint = {
 
 export default function RatingChart() {
     const { global } = useGlobal();
+    const chartRef = useRef<ReactECharts>(null);
+
+    useEffect(() => {
+        const handleResize = () => {
+            chartRef.current?.getEchartsInstance().resize();
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
     const username = global.player1Profile?.username.toLowerCase();
 
     //0 = blitz, 1 = bullet, 2 = rapid, 3 = daily
@@ -133,7 +144,7 @@ export default function RatingChart() {
                 type: "line",
                 data: r.data,
                 symbol: "circle",
-                symbolSize: 5,
+                symbolSize: (window.innerWidth > 800?5:1),
                 showSymbol: true,
                 lineStyle: {
                     width: 3,
@@ -180,12 +191,11 @@ export default function RatingChart() {
     };
 
     return (
-        <div style={{ width: "100%", height: "320px" }}>
             <ReactECharts
+                ref={chartRef}
                 option={option}
                 onEvents={onEvents}
                 style={{ width: "100%", height: "100%" }}
             />
-        </div>
     );
 }

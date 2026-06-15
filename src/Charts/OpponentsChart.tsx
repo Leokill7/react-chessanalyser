@@ -2,7 +2,7 @@ import ReactECharts from "echarts-for-react";
 import { useGlobal } from "../GlobalContext";
 import {useEffect, useRef} from "react";
 
-export default function TimeClassChart() {
+export default function OpponentsChart() {
     const { global } = useGlobal();
     const chartRef = useRef<ReactECharts>(null);
 
@@ -16,38 +16,49 @@ export default function TimeClassChart() {
     }, []);
     const username = global.player1Profile?.username.toLowerCase();
 
-    const counts: Record<string, number> = {
-        blitz: 0,
-        bullet: 0,
-        rapid: 0,
-        daily: 0,
-    };
+    const opponentCounts: Record<string, number> = {};
 
     global.foundGames.forEach((game) => {
         if (!username) return;
+
         const isBlack = game.black.username.toLowerCase() === username;
         const isWhite = game.white.username.toLowerCase() === username;
+
         if (!isBlack && !isWhite) return;
 
-        if (game.time_class in counts) {
-            counts[game.time_class]++;
-        }
+        const opponent = isBlack
+            ? game.white.username
+            : game.black.username;
+
+        opponentCounts[opponent] = (opponentCounts[opponent] ?? 0) + 1;
     });
 
+    // Sortieren und Top 10 + "Sonstige"
+    const sorted = Object.entries(opponentCounts)
+        .sort((a, b) => b[1] - a[1]);
+
+    const top10 = sorted.slice(0, 10);
+    const others = sorted.slice(10).reduce((sum, [, count]) => sum + count, 0);
+
+    const colors = [
+        "#60a5fa", "#f87171", "#86efac", "#facc15", "#c084fc",
+        "#fb923c", "#34d399", "#f472b6", "#38bdf8", "#a3e635",
+    ];
+
     const pieData = [
-        { value: counts.blitz,  name: "Blitz",  itemStyle: { color: "#60a5fa" } },
-        { value: counts.bullet, name: "Bullet", itemStyle: { color: "#f87171" } },
-        { value: counts.rapid,  name: "Rapid",  itemStyle: { color: "#86efac" } },
-        { value: counts.daily,  name: "Daily",  itemStyle: { color: "#facc15" } },
-    ].filter(d => d.value > 0); // leere Typen ausblenden
+        ...top10.map(([name, value], i) => ({
+            name,
+            value,
+            itemStyle: { color: colors[i] },
+        })),
+        ...(others > 0 ? [{ name: "Others", value: others, itemStyle: { color: "#6b7280" } }] : []),
+    ];
 
     const option = {
         backgroundColor: "transparent",
         animation: false,
         legend: {
-            top: 10,
-            textStyle: { color: "#d1d5db" },
-            icon: "circle",
+            show: false,
         },
         tooltip: {
             trigger: "item",

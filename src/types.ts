@@ -44,3 +44,36 @@ export type ChessPlayerProfile = {
     league: string;
     streaming_platforms: string[];
 }
+
+export type PopoverInfo = {
+    posX: number;
+    posY: number;
+    playerProfile: ChessPlayerProfile;
+}
+
+export type WinLossDistribution = {
+    p1: {
+        won: number;
+        checkmate: number;
+        timeout: number;
+        resigned: number;
+        abandoned: number;
+        other: number;
+    }
+    p2: {
+        won: number;
+        checkmate: number;
+        timeout: number;
+        resigned: number;
+        abandoned: number;
+        other: number;
+    }
+    drawn: {
+        total: number;
+        repetition: number;
+        stalemate: number;
+        timeVsInsufficient: number;
+        insufficient: number;
+        agreed: number;
+    },
+}

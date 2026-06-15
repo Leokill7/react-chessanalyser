@@ -1,47 +1,18 @@
 import React, {useEffect, useState} from "react"
-import {GetFlagCoordinates, GetDataFrom, formatUnixTimestamp} from "../commonFunctions";
+import { GetDataFrom, formatUnixTimestamp, GetPlayerName, GetLeagueIcon} from "../commonFunctions";
 import {useGlobal} from "../GlobalContext";
 import {ChessGame, ChessPlayerProfile} from "../types";
 
 import wkIcon from "../Icons/wk.png";
 import bkIcon from "../Icons/bk.png";
 
-import bronzeLeagueIcon from "../Icons/LeagueIcons/bronzeleagueIcon.svg";
-import championLeagueIcon from "../Icons/LeagueIcons/championleagueIcon.svg";
-import crystalLeagueIcon from "../Icons/LeagueIcons/crystalleagueIcon.svg";
-import eliteLeagueIcon from "../Icons/LeagueIcons/eliteleagueIcon.svg";
-import legendLeagueIcon from "../Icons/LeagueIcons/legendleagueIcon.svg";
-import silverLeagueIcon from "../Icons/LeagueIcons/silverleagueIcon.svg";
-import stoneLeagueIcon from "../Icons/LeagueIcons/stoneleagueIcon.svg";
-import woodLeagueIcon from "../Icons/LeagueIcons/woodleagueIcon.svg";
 import glassesIcon from "../Icons/glassesIcon.png";
 
 import dailyIcon from "../Icons/TimeClassIcons/dailyIcon.png";
 import rapidIcon from "../Icons/TimeClassIcons/rapidIcon.png";
 import blitzIcon from "../Icons/TimeClassIcons/blitzIcon.png";
 import bulletIcon from "../Icons/TimeClassIcons/bulletIcon.png";
-
-function GetLeagueIcon(leagueName: string | undefined): string {
-    switch (leagueName) {
-        case "Bronze":
-            return bronzeLeagueIcon;
-        case "Champion":
-            return championLeagueIcon;
-        case "Crystal":
-            return crystalLeagueIcon;
-        case "Elite":
-            return eliteLeagueIcon;
-        case "Legend":
-            return legendLeagueIcon;
-        case "Silver":
-            return silverLeagueIcon;
-        case "Stone":
-            return stoneLeagueIcon;
-        case "Wood":
-            return woodLeagueIcon;
-    }
-    return woodLeagueIcon;
-}
+import FlagIcon from "../Components/FlagIcon";
 
 function GetTimeClassIcon(timeClass: string): string {
     switch (timeClass) {
@@ -59,7 +30,10 @@ function GetTimeClassIcon(timeClass: string): string {
 
 export default function MatchHistory() {
     const { global } = useGlobal();
-    const [matchHistorySize, setMatchHistorySize] = useState(5);
+    const [matchHistorySize, setMatchHistorySize] = useState(() => {
+        const stored = Number(localStorage.getItem("selectedMatchHistorySize"));
+        return stored || 5;
+    });
     const [gamesToRender, setGamesToRender] = useState<{game:ChessGame,player2Profile:ChessPlayerProfile|undefined}[]>([]);
     const [visible, setVisible] = useState<boolean>(false);
 
@@ -70,7 +44,7 @@ export default function MatchHistory() {
             let reversedGames = [...global.foundGames].reverse();
 
             let nextGamesToRender = (await Promise.all(
-                reversedGames.slice(0, matchHistorySize).map(async (game, index) => {
+                reversedGames.slice(0, matchHistorySize).map(async (game) => {
                     if (global.twoPlayerSelected) {
                         return {game: game, player2Profile:global.player2Profile };
                     }else{
@@ -96,52 +70,75 @@ export default function MatchHistory() {
         return () => {
             cancelled = true;
         };
-    }, [global, matchHistorySize]);
+    }, [global.player2Profile,
+        global.player1Profile,
+        global.twoPlayerSelected,
+        global.foundGames,
+        matchHistorySize]);
+
+    const handleGraphChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = Number(e.target.value);
+        setMatchHistorySize(value);
+        localStorage.setItem("selectedMatchHistorySize", value.toString());
+    };
 
     return (
         <div>
-            <div className="games-played-text">MatchHistory</div>
+            <div className="header-2">MatchHistory</div>
 
-            <select className="graph-select" onChange={(e) => setMatchHistorySize(Number(e.target.value))}>
+            <select
+                className="select"
+                onChange={handleGraphChange}
+                value={matchHistorySize}
+                id={"matchHistorySizeSelect"}
+            >
                 <option value={5}>5 Games</option>
                 <option value={25}>25 Games</option>
                 <option value={50}>50 Games</option>
                 <option value={100}>100 Games</option>
             </select>
+            <div style={{
+                height: "var(--match-history-height)",
+                ...(!visible ? {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                } : {})
+            }}>
+                <div className="spinner" style={{ display: visible?"none":"block" }} />
+                <div className="match-history-container" style={{display: visible?"block":"none"}}>
+                    <div className="match-history-descr">
+                        <div></div>
+                        <div></div>
+                        <div>Name</div>
+                        <div title={"Rating points"}>RP</div>
+                        <div>Acc</div>
+                        <div>Moves</div>
+                        <div></div>
+                    </div>
 
-            <div style={{display: visible?"block":"none", border: "1px solid black", borderRadius: "10px", overflow:"hidden"}}>
-                <div className="match-history-descr">
-                    <div>Flag</div>
-                    <div>League</div>
-                    <div>Name/Date</div>
-                    <div>Rating</div>
-                    <div>Color</div>
-                    <div>Acc</div>
-                    <div>Mode</div>
-                    <div>Moves</div>
-                    <div>Result</div>
-                </div>
-
-                <div className="match-history-list-container">
-                    {gamesToRender.map((gameInfo, index) =>
-                    {
-                        return(
-                            <MatchHistoryElement
-                                key={index}
-                                game={gameInfo.game}
-                                player2Profile={gameInfo.player2Profile}
-                                gameIndex={index}
-                            />
-                        )
-                    })}
+                    <div className="match-history-list-container">
+                        {gamesToRender.map((gameInfo, index) =>
+                        {
+                            return(
+                                <MatchHistoryElement
+                                    key={index}
+                                    game={gameInfo.game}
+                                    player2Profile={gameInfo.player2Profile}
+                                    gameIndex={index}
+                                />
+                            )
+                        })}
+                    </div>
                 </div>
             </div>
+
 
         </div>)
 }
 
 function MatchHistoryElement({game, player2Profile,gameIndex}: { game: ChessGame, player2Profile: ChessPlayerProfile|undefined, gameIndex: number}) {
-    const {global} = useGlobal();
+    const {global, setGlobal} = useGlobal();
 
     type PlayerGameInfo = {
         colorIcon: string;
@@ -189,7 +186,7 @@ function MatchHistoryElement({game, player2Profile,gameIndex}: { game: ChessGame
             if (gameInfo.rated && game.rules === gameInfo.rules && game.time_class === gameInfo.time_class) {
                 const player1IsBlackInPrevious = gameInfo.black.username.toLowerCase() === global.player1Profile?.username.toLowerCase();
                 const previousRR = player1IsBlackInPrevious ? gameInfo.black.rating : gameInfo.white.rating;
-                if(player1GameInfo?.rating!=undefined){
+                if(player1GameInfo?.rating!==undefined){
                     gainedRR = player1GameInfo?.rating - previousRR;
                     break;
                 }
@@ -197,42 +194,46 @@ function MatchHistoryElement({game, player2Profile,gameIndex}: { game: ChessGame
         }
     }
 
-
-    function FlagIcon({countryISOCode}: { countryISOCode: string | undefined }) {
-        return (
-            <div
-                style={{backgroundPosition: GetFlagCoordinates(countryISOCode)}}
-                className="flag-div"
-            />
-        );
-    }
-
     return (
         <div
             className="match-history-element"
-            style={{display: "grid", backgroundColor: backgroundColor}}
+            style={{ backgroundColor: backgroundColor}}
         >
             <FlagIcon countryISOCode={global.player1Profile?.country.split("country/")[1]}/>
 
             <img
                 style={{margin: "auto"}}
                 className="player-league-img"
-                src={GetLeagueIcon(global.player1Profile?.league)}
+                src={GetLeagueIcon(global.player1Profile)}
                 alt="LeagueIcon"
             />
 
-            <a style={{margin:"auto"}}>{global.player1Profile?.url.split("member/")[1]}</a>
+            <div
+                style={{margin:"auto", cursor: "pointer"}}
+                onClick={(e) => {
+                    if(!global.player1Profile) return false;
+                    setGlobal({popoverInfo: {posX: e.pageX, posY: e.pageY,playerProfile: global.player1Profile}})
+                }}
+            >
+                {GetPlayerName(global.player1Profile)}
+            </div>
 
-            <div style={{display: "flex",justifyContent:"center",alignItems:"center",gap:"4px"}}>
+            <div
+                style={{display: "flex",justifyContent:"center",alignItems:"center",gap:"4px"}}
+            >
                 <div>{player1GameInfo?.rating ?? player1GameInfo?.rating}</div>
                 {
                     gainedRR !== undefined &&
                     <div>
-                        {player1GameInfo?.rating?"("+(gainedRR>0?"+":"")+gainedRR+")":""}
+                        {player1GameInfo?.rating?(gainedRR>0?"+":"")+gainedRR:""}
                     </div>
                 }
             </div>
 
+
+            <p style={{margin:"auto"}}>{player1GameInfo?.accuracy ?? "--"}</p>
+
+            <div></div>
             <img
                 className="player-color-img"
                 style={{margin: "auto"}}
@@ -240,17 +241,11 @@ function MatchHistoryElement({game, player2Profile,gameIndex}: { game: ChessGame
                 alt="ColorIcon"
             />
 
-            <p>{player1GameInfo?.accuracy ?? "--"}</p>
 
             <div></div>
             <div></div>
 
-            <p style={{margin:"auto"}} >{result === 0 ? "draw" : result === 1 ? "Win" : "Loose"}</p>
-
-            <div></div>
-            <div></div>
-
-            <p style={{margin:"auto"}}>{formatUnixTimestamp(game.end_time)}</p>
+            <p style={{margin:"auto", overflow:"hidden"}}>{formatUnixTimestamp(game.end_time)}</p>
 
             <a
                 title="Watch game"
@@ -266,8 +261,12 @@ function MatchHistoryElement({game, player2Profile,gameIndex}: { game: ChessGame
                 />
             </a>
 
+
             <div></div>
-            <div></div>
+
+            <p style={{margin:"auto"}}>
+                {game.pgn.split("\n\n")[1].split(". ").length - 1}
+            </p>
 
             <div style={{margin:"auto"}}>
                 <img
@@ -278,34 +277,35 @@ function MatchHistoryElement({game, player2Profile,gameIndex}: { game: ChessGame
                 />
             </div>
 
-            <p style={{margin:"auto"}}>{game.pgn.split("\n\n")[1].split(". ").length - 1}</p>
-            <p></p>
-
             <FlagIcon countryISOCode={player2Profile?.country.split("country/")[1]}/>
 
             <img
                 style={{margin: "auto"}}
                 className="player-league-img"
-                src={GetLeagueIcon(player2Profile?.league)}
+                src={GetLeagueIcon(player2Profile)}
                 alt="LeagueIcon"
             />
 
-            <a style={{margin:"auto"}}>{player2Profile ? player2Profile.url.split("member/")[1] : ""}</a>
+            <div
+                style={{margin:"auto", cursor: "pointer"}}
+                onClick={(e) => {
+                    if(!player2Profile) return false;
+                    setGlobal({popoverInfo: {posX: e.pageX, posY: e.pageY,playerProfile: player2Profile}})
+                }}
+            >
+                {GetPlayerName(player2Profile)}
+            </div>
 
             <div style={{margin:"auto"}}>{player2GameInfo?.rating===Number.MAX_SAFE_INTEGER?"":player2GameInfo?.rating}</div>
 
+            <p style={{margin:"auto"}}>{player2GameInfo?.accuracy ?? "--"}</p>
+
+            <div></div>
             <img
                 className="player-color-img"
                 style={{margin: "auto"}}
                 src={player2GameInfo?.colorIcon}
                 alt="ColorIcon"
             />
-
-            <p style={{margin:"auto"}}>{player2GameInfo?.accuracy ?? "--"}</p>
-
-            <div></div>
-            <div></div>
-
-            <p style={{margin:"auto"}}>{result === 0 ? "draw" : result === 1 ?"Loose":"Win"}</p>
         </div>)
 }

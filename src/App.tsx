@@ -1,7 +1,5 @@
-import React, {RefObject, useEffect, useRef, useState} from 'react';
-import logo from './logo.svg';
+import React, { useEffect,  useState} from 'react';
 import {GetDataFrom} from "./commonFunctions";
-import './App.css';
 import SearchFilter from "./SearchFilter/SearchFilter";
 import MatchHistory from "./MatchHistory/MatchHistory";
 import ChartWrapper from "./Charts/ChartWrapper";
@@ -12,8 +10,8 @@ import BaseStatsForTwoSelected, {
     GameResultOverviewForOneSelected,
     GameResultOverviewForTwoSelected
 } from "./BaseInformation/BaseStats";
-import RatingChart from "./Charts/RatingChart";
 import { useSearchParams } from 'react-router-dom';
+import PlayerProfilePopover from "./PlayerProfilePopover";
 
 async function getAllGamesOf(playerName:string) {
     if(playerName === undefined){
@@ -26,6 +24,7 @@ async function getAllGamesOf(playerName:string) {
         const gamesArray = await getAllMonthGames(links)
 
         for(let i = 0; i < gamesArray.length; i++){
+            if(!gamesArray[i]){continue}
             gamesArray[i].games.forEach((game: any) => {
                 games.push(game)
             })
@@ -37,8 +36,16 @@ async function getAllGamesOf(playerName:string) {
     return []
 }
 async function getAllMonthGames(links: string[]){
-    const functions = links.map(GetDataFrom)
-    return Promise.all(functions);
+    const results = await Promise.allSettled(links.map(GetDataFrom));
+
+    return results.map((result, index) => {
+        if (result.status === "fulfilled") {
+            return result.value;
+        }
+
+        console.error(`Request failed for ${links[index]}:`, result.reason);
+        return null;
+    });
 }
 
 function App() {
@@ -46,6 +53,7 @@ function App() {
     const { global, setGlobal } = useGlobal();
     const [optionsVisible,setOptionsVisible] = useState(false);
     const [resultsVisible,setResultsVisible] = useState(false);
+    const [fetchingData,setFetchingData] = useState(false);
 
     const [player1NameInputValue,setPlayer1NameInputValue] = useState<string>(searchParams.get("player1Name") ?? "");
     const [player2NameInputValue,setPlayer2NameInputValue] = useState<string>(searchParams.get("player2Name") ?? "");
@@ -64,6 +72,13 @@ function App() {
     const [kotHChecked, setKotHChecked]             = useState<boolean>(searchParams.get("kotHChecked")         !== "false");
     const [crazyhouseChecked, setCrazyhouseChecked] = useState<boolean>(searchParams.get("crazyhouseChecked")   !== "false");
     const [gameAmountSliderValue, setGameAmountSliderValue] = useState<number>(Number(searchParams.get("gameAmountSliderValue"))    || 5);
+
+
+    useEffect(() => {
+        if (searchParams.get("player1Name")) {
+            searchResults();
+        }
+    }, []);
 
     async function searchResults(){
         setResultsVisible(false)
@@ -102,6 +117,8 @@ function App() {
             return;
         }
 
+        setFetchingData(true)
+
         let twoPlayersSearched = false;
 
         setGlobal({player1Profile:await GetDataFrom("https://api.chess.com/pub/player/"+ player1Name)});
@@ -123,6 +140,7 @@ function App() {
             }else{
                 alert("For the given account were no games with this specification found")
             }
+            setFetchingData(false)
             return;
         }
 
@@ -130,6 +148,7 @@ function App() {
             alert("The given account has more the 10000 games played. Browser performance may suffer")
         }
 
+        setFetchingData(false)
         setResultsVisible(true)
     }
 
@@ -198,10 +217,8 @@ function App() {
                 if(game.white.username.toLowerCase() === player1 && game.black.username.toLowerCase() === player2) {
                     return true;
                 }
-                if(game.black.username.toLowerCase() === player1 && game.white.username.toLowerCase() === player2){
-                    return true;
-                }
-                return false;
+                return game.black.username.toLowerCase() === player1 && game.white.username.toLowerCase() === player2;
+
             })
         }
 
@@ -211,110 +228,125 @@ function App() {
     }
 
     return (
-      <div style={{textAlign: "center",width:"var(--container-width)",margin:"auto" }}>
-          <div style={{ margin: 20 }}>
-              <h2>Chess.com Analyser</h2>
-          </div>
+    <>
+        {
+            global.popoverInfo &&
+            <PlayerProfilePopover
+                player1NameInputValue={player1NameInputValue}
+                player2NameInputValue={player2NameInputValue}
+                setPlayer1NameInputValue={setPlayer1NameInputValue}
+                setPlayer2NameInputValue={setPlayer2NameInputValue}
+                searchGames={searchResults}
+            />
 
-          <form style={{ width: "auto" }} autoComplete="on" onSubmit={(e) => { e.preventDefault(); }}>
-              <div style={{ textAlign: "center" }}>
-                  <input
-                      type="text"
-                      name="playername"
-                      className="name-input"
-                      spellCheck={false}
-                      placeholder="playername"
-                      value={player1NameInputValue}
-                      onChange={(e) => { setPlayer1NameInputValue(e.target.value); }}
-                  />
+        }
+        <div style={{textAlign: "center",width:"var(--container-width)",margin:"auto" }}>
+            <div style={{ margin: 20 }}>
+                <h2>Chess.com Analyser</h2>
+            </div>
 
-                  <h5 style={{ display: "inline-block" }}>VS</h5>
+            <form style={{ width: "auto" }} autoComplete="on" onSubmit={(e) => { e.preventDefault(); }}>
+                <div style={{ textAlign: "center" }}>
+                    <input
+                        type="text"
+                        name="playername"
+                        className="name-input"
+                        spellCheck={false}
+                        placeholder="playername"
+                        value={player1NameInputValue}
+                        onChange={(e) => { setPlayer1NameInputValue(e.target.value); }}
+                    />
 
-                  <input
-                      type="text"
-                      name="playername"
-                      className="name-input"
-                      spellCheck={false}
-                      placeholder="playername or nothing"
-                      value={player2NameInputValue}
-                      onChange={(e) => { setPlayer2NameInputValue(e.target.value); }}
-                  />
-              </div>
+                    <h5 style={{ display: "inline-block" }}>VS</h5>
 
-              <button
-                  type="button"
-                  className="more-options-button"
-                  onClick={() => {setOptionsVisible(!optionsVisible); }}
-              >
-                  Options
-              </button>
+                    <input
+                        type="text"
+                        name="playername"
+                        className="name-input"
+                        spellCheck={false}
+                        placeholder="playername or nothing"
+                        value={player2NameInputValue}
+                        onChange={(e) => { setPlayer2NameInputValue(e.target.value); }}
+                    />
+                </div>
 
-              <br />
+                <button
+                    type="button"
+                    className="more-options-button"
+                    onClick={() => {setOptionsVisible(!optionsVisible); }}
+                >
+                    Options
+                </button>
 
-              <div style={{display: (optionsVisible ? "block" : "none")}}>
-                  <SearchFilter
-                      rankedChecked={rankedChecked}
-                      setRankedChecked={setRankedChecked}
-                      nonRankedChecked={nonRankedChecked}
-                      setNonRankedChecked={setNonRankedChecked}
-                      whiteChecked={whiteChecked}
-                      setWhiteChecked={setWhiteChecked}
-                      blackChecked={blackChecked}
-                      setBlackChecked={setBlackChecked}
-                      dailyChecked={dailyChecked}
-                      setDailyChecked={setDailyChecked}
-                      rapidChecked={rapidChecked}
-                      setRapidChecked={setRapidChecked}
-                      blitzChecked={blitzChecked}
-                      setBlitzChecked={setBlitzChecked}
-                      bulletChecked={bulletChecked}
-                      setBulletChecked={setBulletChecked}
-                      bughouseChecked={bughouseChecked}
-                      setBughouseChecked={setBughouseChecked}
-                      chess960Checked={chess960Checked}
-                      setChess960Checked={setChess960Checked}
-                      threeCheckChecked={threeCheckChecked}
-                      setThreeCheckChecked={setThreeCheckChecked}
-                      kotHChecked={kotHChecked}
-                      setKotHChecked={setKotHChecked}
-                      crazyhouseChecked={crazyhouseChecked}
-                      setCrazyhouseChecked={setCrazyhouseChecked}
-                      gameAmountSliderValue={gameAmountSliderValue}
-                      setGameAmountSliderValue={setGameAmountSliderValue}
-                  />
-              </div>
+                <br />
 
+                <div style={{display: (optionsVisible ? "block" : "none")}}>
+                    <SearchFilter
+                        rankedChecked={rankedChecked}
+                        setRankedChecked={setRankedChecked}
+                        nonRankedChecked={nonRankedChecked}
+                        setNonRankedChecked={setNonRankedChecked}
+                        whiteChecked={whiteChecked}
+                        setWhiteChecked={setWhiteChecked}
+                        blackChecked={blackChecked}
+                        setBlackChecked={setBlackChecked}
+                        dailyChecked={dailyChecked}
+                        setDailyChecked={setDailyChecked}
+                        rapidChecked={rapidChecked}
+                        setRapidChecked={setRapidChecked}
+                        blitzChecked={blitzChecked}
+                        setBlitzChecked={setBlitzChecked}
+                        bulletChecked={bulletChecked}
+                        setBulletChecked={setBulletChecked}
+                        bughouseChecked={bughouseChecked}
+                        setBughouseChecked={setBughouseChecked}
+                        chess960Checked={chess960Checked}
+                        setChess960Checked={setChess960Checked}
+                        threeCheckChecked={threeCheckChecked}
+                        setThreeCheckChecked={setThreeCheckChecked}
+                        kotHChecked={kotHChecked}
+                        setKotHChecked={setKotHChecked}
+                        crazyhouseChecked={crazyhouseChecked}
+                        setCrazyhouseChecked={setCrazyhouseChecked}
+                        gameAmountSliderValue={gameAmountSliderValue}
+                        setGameAmountSliderValue={setGameAmountSliderValue}
+                    />
+                </div>
+                <div>
+                    <button type="submit" className="search-button" onClick={(e) => {
+                        e.preventDefault();
+                        searchResults()
+                    }}>
+                        Search
+                    </button>
+                </div>
+            </form>
+            <div
+                style={{
+                    display: fetchingData? "flex" : "none" ,
+                    height: "200px",
+                    alignItems: "center",
+                    justifyContent: "center"
+                }}
+            >
+                <div className="spinner"/>
+            </div>
+            <div className="generated-content-container" style={{display: resultsVisible? "grid" : "none"}}>
+                {global.twoPlayerSelected?
+                    <>
+                        <BaseStatsForTwoSelected/>
+                        <GameResultOverviewForTwoSelected/>
+                    </>:
+                    <>
+                        <BaseStatsForOneSelected/>
+                        <GameResultOverviewForOneSelected/>
+                    </>}
+                <ChartWrapper/>
+                <MatchHistory/>
+            </div>
+        </div>
+    </>
 
-
-
-              <div>
-                  <button type="submit" className="search-button" onClick={(e) => {
-                      e.preventDefault();
-                      searchResults()
-                  }}>
-                      Search
-                  </button>
-              </div>
-          </form>
-
-          <div style={{ margin: "auto", textAlign: "center", display: "none" }}>
-              <p style={{ display: "inline-block" }}>Loading games can take up to 15s</p>
-              <div className="loader"></div>
-          </div>
-          <div style={{ margin: "auto", textAlign: "center", display: resultsVisible? "grid" : "none" ,gap: "20px", marginBottom: "50px" }}>
-              {global.twoPlayerSelected?
-                  <>
-                      <BaseStatsForTwoSelected/>
-                    <GameResultOverviewForTwoSelected/>
-                  </>:
-                  <>
-                      <BaseStatsForOneSelected/>
-                      <GameResultOverviewForOneSelected/>
-                  </>}
-              <ChartWrapper/>
-              <MatchHistory/>
-          </div>
-      </div>
   );
 }
 

@@ -1,30 +1,40 @@
-import {ChessGame} from "./types";
+import {ChessPlayerProfile} from "./types";
+import bronzeLeagueIcon from "./Icons/LeagueIcons/bronzeleagueIcon.svg";
+import championLeagueIcon from "./Icons/LeagueIcons/championleagueIcon.svg";
+import crystalLeagueIcon from "./Icons/LeagueIcons/crystalleagueIcon.svg";
+import eliteLeagueIcon from "./Icons/LeagueIcons/eliteleagueIcon.svg";
+import legendLeagueIcon from "./Icons/LeagueIcons/legendleagueIcon.svg";
+import silverLeagueIcon from "./Icons/LeagueIcons/silverleagueIcon.svg";
+import stoneLeagueIcon from "./Icons/LeagueIcons/stoneleagueIcon.svg";
+import woodLeagueIcon from "./Icons/LeagueIcons/woodleagueIcon.svg";
 export async function GetDataFrom(link:string) {
-    return await fetch(link)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
+    const response = await fetch(link);
 
-            return response.json();
-        })
-        .then(data => {
-            return data
-        })
-        .catch(error => {
-            console.error('There was a problem with the fetch operation:', error);
-        });
+    if (!response.ok) {
+        throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
 }
 export function formatUnixTimestamp(unixTimestamp:number) {
     const date = new Date(unixTimestamp * 1000);
 
-    const year = date.getFullYear();
+    const year = date.getFullYear() -2000;
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     const hours = String(date.getHours()).padStart(2, "0");
     const minutes = String(date.getMinutes()).padStart(2, "0");
 
-    return `${year}.${month}.${day} ${hours}:${minutes}`;
+    return `${hours}:${minutes} ${day}.${month}.${year}`;
+}
+export function getDateFromUnitTimestamp(unixTimestamp:number) {
+    const date = new Date(unixTimestamp * 1000);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${day}.${month}.${year}`;
 }
 export function GetFlagCoordinates(flagID:string | undefined ) {
     if(flagID === "" || flagID === undefined){
@@ -64,7 +74,7 @@ export function GetFlagCoordinates(flagID:string | undefined ) {
 
             j = countries[i].indexOf(flagID.toLowerCase())
             k = i;
-            if(j != -1){
+            if(j !== -1){
                 break;
             }
         }
@@ -72,4 +82,31 @@ export function GetFlagCoordinates(flagID:string | undefined ) {
     }
 
     return out
+}
+
+export function GetPlayerName(playerProfile:ChessPlayerProfile|undefined){
+    if(!playerProfile){return "???"}
+    return playerProfile.url.split("member/")[1];
+}
+
+export function GetLeagueIcon(playerProfile:ChessPlayerProfile|undefined): string {
+    switch (playerProfile?.league) {
+        case "Bronze":
+            return bronzeLeagueIcon;
+        case "Champion":
+            return championLeagueIcon;
+        case "Crystal":
+            return crystalLeagueIcon;
+        case "Elite":
+            return eliteLeagueIcon;
+        case "Legend":
+            return legendLeagueIcon;
+        case "Silver":
+            return silverLeagueIcon;
+        case "Stone":
+            return stoneLeagueIcon;
+        case "Wood":
+            return woodLeagueIcon;
+    }
+    return woodLeagueIcon;
 }

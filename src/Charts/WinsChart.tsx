@@ -7,7 +7,7 @@ type AccuracyPoint = {
     url: string;
 };
 
-export default function OnePlayerAccuracyChart() {
+export default function WinsChart() {
     const { global } = useGlobal();
     const chartRef = useRef<ReactECharts>(null);
 
@@ -19,27 +19,34 @@ export default function OnePlayerAccuracyChart() {
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
     }, []);
-
     const username = global.player1Profile?.username.toLowerCase();
 
     const data: { data: AccuracyPoint[], title: string, color: string }[] = [
-        { title: "Accuracy", data: [], color: "#6A994D" }
+        { title: "Win/Loss", data: [], color: "#6A994D" }
     ];
+
+    let winLooseCount = 0;
 
     global.foundGames.forEach((game) => {
         if (!username) return;
-        if (!game.accuracies) return;
 
         const isBlack = game.black.username.toLowerCase() === username;
         const isWhite = game.white.username.toLowerCase() === username;
 
         if (!isBlack && !isWhite) return;
 
-        const accuracy = isBlack ? game.accuracies.black : game.accuracies.white;
-        if (!accuracy) return;
+        const blackWon = game.black.result === "win";
+        const whiteWon = game.white.result === "win";
 
+        if((blackWon && isBlack) || (isWhite && whiteWon)){
+            winLooseCount ++;
+        }else if((whiteWon && isBlack) || (isWhite && blackWon)){
+            winLooseCount --;
+        }
+
+        const value = winLooseCount;
         const point: AccuracyPoint = {
-            value: [data[0].data.length + 1, accuracy],
+            value: [data[0].data.length + 1, value],
             url: game.url,
         };
 
@@ -75,9 +82,7 @@ export default function OnePlayerAccuracyChart() {
         },
         yAxis: {
             type: "value",
-            min: 0,
-            max: 100,
-            name: "Accuracy %",
+            name: "Win/Loss",
             nameLocation: "middle",
             nameGap: 35,
             axisLabel: { color: "#9ca3af" },

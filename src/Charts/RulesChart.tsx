@@ -1,8 +1,19 @@
 import ReactECharts from "echarts-for-react";
 import { useGlobal } from "../GlobalContext";
+import {useEffect, useRef} from "react";
 
 export default function RulesChart() {
     const { global } = useGlobal();
+    const chartRef = useRef<ReactECharts>(null);
+
+    useEffect(() => {
+        const handleResize = () => {
+            chartRef.current?.getEchartsInstance().resize();
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
     const username = global.player1Profile?.username.toLowerCase();
 
     const counts: Record<string, number> = {
@@ -72,11 +83,10 @@ export default function RulesChart() {
     };
 
     return (
-        <div style={{ width: "100%", height: "320px" }}>
             <ReactECharts
+                ref={chartRef}
                 option={option}
                 style={{ width: "100%", height: "100%" }}
             />
-        </div>
     );
 }

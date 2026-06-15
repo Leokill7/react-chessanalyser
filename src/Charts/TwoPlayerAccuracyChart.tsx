@@ -1,5 +1,7 @@
 import ReactECharts from "echarts-for-react";
 import { useGlobal } from "../GlobalContext";
+import {GetPlayerName} from "../commonFunctions";
+import {useEffect, useRef} from "react";
 
 type AccuracyPoint = {
     value: [number, number];
@@ -8,10 +10,20 @@ type AccuracyPoint = {
 
 export default function TwoPlayerAccuracyChart() {
     const { global } = useGlobal();
+    const chartRef = useRef<ReactECharts>(null);
+
+    useEffect(() => {
+        const handleResize = () => {
+            chartRef.current?.getEchartsInstance().resize();
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
     const data: { data: AccuracyPoint[], title: string, color: string }[] = [
-        { title: global.player1Profile?.url.split("member/")[1] + "'s accuracy", data: [], color: "#6A994D" },
-        { title: global.player2Profile?.url.split("member/")[1] + "'s accuracy", data: [], color: "#266999" }
+        { title: GetPlayerName(global.player1Profile) + "'s accuracy", data: [], color: "#6A994D" },
+        { title: GetPlayerName(global.player2Profile) + "'s accuracy", data: [], color: "#266999" }
     ];
 
     global.foundGames.forEach((game) => {
@@ -77,7 +89,7 @@ console.log(data);
             type: "value",
             min: 0,
             max: 100,
-            name: "Accuracy %",  // ← korrigiert
+            name: "Accuracy %",
             nameLocation: "middle",
             nameGap: 35,
             axisLabel: { color: "#9ca3af" },
@@ -89,7 +101,7 @@ console.log(data);
             type: "line",
             data: r.data,
             symbol: "circle",
-            symbolSize: 5,
+            symbolSize: (window.innerWidth > 800?5:1),
             showSymbol: true,
             lineStyle: { width: 3, color: r.color },
             itemStyle: { color: r.color },
@@ -115,12 +127,11 @@ console.log(data);
     };
 
     return (
-        <div style={{ width: "100%", height: "320px" }}>
             <ReactECharts
+                ref={chartRef}
                 option={option}
                 onEvents={onEvents}
                 style={{ width: "100%", height: "100%" }}
             />
-        </div>
     );
 }

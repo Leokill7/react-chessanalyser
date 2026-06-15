@@ -1,10 +1,11 @@
 import  { createContext, useContext, useState, type ReactNode } from 'react';
-import {ChessGame, ChessPlayerProfile} from "./types";
+import {ChessGame, ChessPlayerProfile, PopoverInfo} from "./types";
 interface GlobalState {
     foundGames:ChessGame[],
     player1Profile:ChessPlayerProfile|undefined,
     player2Profile:ChessPlayerProfile|undefined,
     twoPlayerSelected:boolean,
+    popoverInfo:PopoverInfo|null,
 }
 
 interface GlobalContextType {
@@ -19,7 +20,8 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
         foundGames:[],
         player1Profile:undefined,
         player2Profile:undefined,
-        twoPlayerSelected:false
+        twoPlayerSelected:false,
+        popoverInfo:null
     });
 
     const setGlobal = (newState: Partial<GlobalState>) => {

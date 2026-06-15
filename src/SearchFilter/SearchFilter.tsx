@@ -1,6 +1,4 @@
-import React, {RefObject, useEffect, useState} from "react";
-import "./SearchFilter.css"
-import rankIcon from "../Icons/rankIcon.png";
+import React from "react";
 
 import wkIcon from "../Icons/wk.png";
 import bkIcon from "../Icons/bk.png";
@@ -15,7 +13,6 @@ import chess960Icon from "../Icons/chess960Icon.png";
 import threeCheckIcon from "../Icons/threeCheckIcon.png";
 import kingOfTheHillIcon from "../Icons/kingOfTheHillIcon.png";
 import crazyhouseIcon from "../Icons/crazyhouseIcon.png";
-type InputRef = RefObject<HTMLInputElement | null>;
 
 type SearchFilterProps = {
     rankedChecked: boolean;
@@ -100,106 +97,88 @@ export default function SearchFilter({
     }
 
     return (
-        <div
-             style={{
-                 display: "grid",
-                 gap:"15px",
-                 padding:"5px",
-                 width: "80%",
-                 margin: "auto",
-                 backgroundColor: "var(--button-background-color)",
-                 border: "var(--button-border-color) 1px solid",
-                 borderRadius: "10px"
-            }}
-        >
-            <div style={{display:"flex", justifyContent: "space-around"}}>
-                <div className="filter-container">
-                    <h6 className={"filter-header"}>Ranked</h6>
-                    <div>
-                        <div className="filter-icon-checkbox-container">
-                            <div>Ranked</div>
-                            <input
-                                type="checkbox"
-                                checked={rankedChecked}
-                                onChange={e => {setRankedChecked(e.target.checked)}}
-                            />
-                        </div>
-                        <div className="filter-icon-checkbox-container">
-                            <div>Non-Ranked</div>
-                            <input
-                                type="checkbox"
-                                checked={nonRankedChecked}
-                                onChange={e => {setNonRankedChecked(e.target.checked)}}
-                            />
-                        </div>
-                    </div>
-                </div>
-                <div className="filter-container">
-                    <h6 className={"filter-header"}>Game Amount:</h6>
-                    <div style={{display:"flex", justifyContent:"space-around", alignItems:"center"}}>
+        <div className="search-filters-container">
+            <div className="filter-container">
+                <h6 className={"filter-header"}>Ranked</h6>
+                <div>
+                    <div className="filter-icon-checkbox-container">
+                        <div>Ranked</div>
                         <input
-                            type="range"
-                            min={0}
-                            max={5}
-                            step={1}
-                            value={gameAmountSliderValue}
-                            onChange={(e) => setGameAmountSliderValue(Number(e.target.value))}
+                            type="checkbox"
+                            checked={rankedChecked}
+                            onChange={e => {setRankedChecked(e.target.checked)}}
                         />
-                        <div>{GetGameAmountText()}</div>
                     </div>
-
+                    <div className="filter-icon-checkbox-container">
+                        <div>Non-Ranked</div>
+                        <input
+                            type="checkbox"
+                            checked={nonRankedChecked}
+                            onChange={e => {setNonRankedChecked(e.target.checked)}}
+                        />
+                    </div>
                 </div>
             </div>
-            <div style={{display:"flex", justifyContent: "space-around"}}>
-                <div className="filter-container">
-                    <h6 className={"filter-header"}>Color:</h6>
+            <div className="filter-container">
+                <h6 className={"filter-header"}>Game Amount:</h6>
+                <div style={{display:"flex", justifyContent:"space-around", alignItems:"center"}}>
+                    <input
+                        type="range"
+                        min={0}
+                        max={5}
+                        step={1}
+                        value={gameAmountSliderValue}
+                        onChange={(e) => setGameAmountSliderValue(Number(e.target.value))}
+                    />
+                    <div>{GetGameAmountText()}</div>
+                </div>
+
+            </div>
+            <div className="filter-container">
+                <h6 className={"filter-header"}>Rules:</h6>
+                <div style={{display:"grid", gridTemplateColumns:'repeat(3,1fr)'}}>
                     {
                         [
-                            {imageSrc:wkIcon,imageTitle:"White",checkboxID:"WhiteCheckbox",value: whiteChecked, setter:setWhiteChecked},
-                            {imageSrc:bkIcon,imageTitle:"Black",checkboxID:"BlackCheckbox",value: blackChecked, setter:setBlackChecked}
+                            {imageSrc:bughouseIcon,imageTitle:"Bughouse",checkboxID:"bughouseCheckbox",value: bughouseChecked, setter:setBughouseChecked},
+                            {imageSrc:chess960Icon,imageTitle:"960Chess",checkboxID:"chess960Checkbox",value: chess960Checked, setter:setChess960Checked},
+                            {imageSrc:threeCheckIcon,imageTitle:"Three-Check",checkboxID:"threecheckCheckbox",value: threeCheckChecked, setter:setThreeCheckChecked},
+                            {imageSrc:kingOfTheHillIcon,imageTitle:"King of the hill",checkboxID:"kingofthehillCheckbox",value: kotHChecked, setter:setKotHChecked},
+                            {imageSrc:crazyhouseIcon,imageTitle:"Crazyhouse",checkboxID:"crazyhouseCheckbox",value: crazyhouseChecked, setter:setCrazyhouseChecked}
+                        ].map((item,index) =>
+                            ImageCheckboxPair({imgSrc: item.imageSrc, imgTitle: item.imageTitle, key: index, value: item.value, setter: item.setter})
+                        )
+                    }
+                </div>
+            </div>
+            <div className="filter-container">
+                <h6 className={"filter-header"}>Timeclass:</h6>
+                <div style={{display:"grid", gridTemplateColumns:'repeat(2,1fr)'}}>
+                    {
+                        [
+                            {imageSrc:dailyIcon,imageTitle:"Daily",checkboxID:"dailyCheckbox",value: dailyChecked, setter:setDailyChecked},
+                            {imageSrc:rapidIcon,imageTitle:"Rapid",checkboxID:"rapidCheckbox",value: rapidChecked, setter:setRapidChecked},
+                            {imageSrc:blitzIcon,imageTitle:"Blitz",checkboxID:"blitzCheckbox",value: blitzChecked, setter:setBlitzChecked},
+                            {imageSrc:bulletIcon,imageTitle:"Bullet",checkboxID:"bulletCheckbox",value: bulletChecked, setter:setBulletChecked}
 
                         ].map((item,index) =>
                             ImageCheckboxPair({imgSrc: item.imageSrc, imgTitle: item.imageTitle, key: index, value: item.value, setter: item.setter})
                         )
                     }
-
-                </div>
-                <div className="filter-container">
-                    <h6 className={"filter-header"}>Timeclass:</h6>
-                    <div style={{display:"grid", gridTemplateColumns:'repeat(2,1fr)'}}>
-                        {
-                            [
-                                {imageSrc:dailyIcon,imageTitle:"Daily",checkboxID:"dailyCheckbox",value: dailyChecked, setter:setDailyChecked},
-                                {imageSrc:rapidIcon,imageTitle:"Rapid",checkboxID:"rapidCheckbox",value: rapidChecked, setter:setRapidChecked},
-                                {imageSrc:blitzIcon,imageTitle:"Blitz",checkboxID:"blitzCheckbox",value: blitzChecked, setter:setBlitzChecked},
-                                {imageSrc:bulletIcon,imageTitle:"Bullet",checkboxID:"bulletCheckbox",value: bulletChecked, setter:setBulletChecked}
-
-                            ].map((item,index) =>
-                                ImageCheckboxPair({imgSrc: item.imageSrc, imgTitle: item.imageTitle, key: index, value: item.value, setter: item.setter})
-                            )
-                        }
-                    </div>
-
-                </div>
-                <div className="filter-container">
-                    <h6 className={"filter-header"}>Rules:</h6>
-                    <div style={{display:"grid", gridTemplateColumns:'repeat(3,1fr)'}}>
-                        {
-                            [
-                                {imageSrc:bughouseIcon,imageTitle:"Bughouse",checkboxID:"bughouseCheckbox",value: bughouseChecked, setter:setBughouseChecked},
-                                {imageSrc:chess960Icon,imageTitle:"960Chess",checkboxID:"chess960Checkbox",value: chess960Checked, setter:setChess960Checked},
-                                {imageSrc:threeCheckIcon,imageTitle:"Three-Check",checkboxID:"threecheckCheckbox",value: threeCheckChecked, setter:setThreeCheckChecked},
-                                {imageSrc:kingOfTheHillIcon,imageTitle:"King of the hill",checkboxID:"kingofthehillCheckbox",value: kotHChecked, setter:setKotHChecked},
-                                {imageSrc:crazyhouseIcon,imageTitle:"Crazyhouse",checkboxID:"crazyhouseCheckbox",value: crazyhouseChecked, setter:setCrazyhouseChecked}
-                            ].map((item,index) =>
-                                ImageCheckboxPair({imgSrc: item.imageSrc, imgTitle: item.imageTitle, key: index, value: item.value, setter: item.setter})
-                            )
-                        }
-                    </div>
                 </div>
             </div>
+            <div className="filter-container">
+                <h6 className={"filter-header"}>Color:</h6>
+                {
+                    [
+                        {imageSrc:wkIcon,imageTitle:"White",checkboxID:"WhiteCheckbox",value: whiteChecked, setter:setWhiteChecked},
+                        {imageSrc:bkIcon,imageTitle:"Black",checkboxID:"BlackCheckbox",value: blackChecked, setter:setBlackChecked}
 
+                    ].map((item,index) =>
+                        ImageCheckboxPair({imgSrc: item.imageSrc, imgTitle: item.imageTitle, key: index, value: item.value, setter: item.setter})
+                    )
+                }
 
+            </div>
         </div>
     );
 }
